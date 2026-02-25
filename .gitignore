@@ -140,3 +140,22 @@ vite.config.ts.timestamp-*
 
 # VS Code settings
 .vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Local environment files
+.env.local

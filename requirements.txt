@@ -1,0 +1,15 @@
+# NyayaSetu AI - RAG Knowledge Base Setup Dependencies
+
+# PDF Processing (choose one)
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0
+
+# Embeddings Generation
+sentence-transformers>=2.2.0
+torch>=2.0.0
+
+# Vector Database (optional for Day 0)
+# pinecone-client>=2.2.0
+
+# Utilities
+numpy>=1.24.0
