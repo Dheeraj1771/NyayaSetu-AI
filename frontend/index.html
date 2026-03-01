@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NyayaSetu AI - Intelligent Consumer Law Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">NyayaSetu AI</span>
+                </h1>
+                <p class="hero-subtitle">Intelligent Consumer Law Assistant</p>
+                <p class="hero-description">
+                    Powered by Retrieval-Augmented Generation and Amazon Bedrock
+                </p>
+                <div class="hero-badge">
+                    <span class="badge-icon">⚖️</span>
+                    <span>Consumer Protection Act, 2019</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Query Card -->
+            <div class="card query-card">
+                <h2 class="card-title">Ask Your Legal Question</h2>
+                <form id="queryForm" class="query-form">
+                    <div class="input-group">
+                        <textarea 
+                            id="questionInput" 
+                            class="question-input" 
+                            placeholder="e.g., What are consumer rights under the Act?"
+                            rows="3"
+                            required
+                        ></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <span class="btn-text">Get Answer</span>
+                        <span class="btn-icon">→</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="card loading-card" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Analyzing legal context...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="card error-card" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h3 class="error-title">Unable to Process Request</h3>
+                <p class="error-message" id="errorMessage"></p>
+                <button class="btn-secondary" onclick="resetForm()">Try Again</button>
+            </div>
+
+            <!-- Answer Card -->
+            <div id="answerCard" class="card answer-card" style="display: none;">
+                <!-- Confidence Badge -->
+                <div class="confidence-badge" id="confidenceBadge">
+                    <span class="badge-label">Confidence:</span>
+                    <span class="badge-value" id="confidenceValue">High</span>
+                </div>
+
+                <!-- Answer Content -->
+                <div class="answer-section">
+                    <h3 class="section-title">Answer</h3>
+                    <div class="answer-content" id="answerContent"></div>
+                </div>
+
+                <!-- Sources Section -->
+                <div class="sources-section">
+                    <button class="sources-toggle" id="sourcesToggle">
+                        <span>View Sources</span>
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                    <div class="sources-content" id="sourcesContent" style="display: none;">
+                        <div id="sourcesList"></div>
+                    </div>
+                </div>
+
+                <!-- Metadata -->
+                <div class="metadata">
+                    <span class="metadata-item">
+                        <span class="metadata-label">Processing Time:</span>
+                        <span id="processingTime">-</span>
+                    </span>
+                </div>
+
+                <!-- New Question Button -->
+                <button class="btn-secondary btn-full" onclick="resetForm()">
+                    Ask Another Question
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">
+                <strong>Disclaimer:</strong> NyayaSetu AI provides informational guidance based on the Consumer Protection Act, 2019. 
+                It does not provide legal advice. Consult qualified legal professionals for complex cases.
+            </p>
+            <p class="footer-credit">
+                Built for AI For Bharat Hackathon 2026
+            </p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
