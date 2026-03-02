@@ -1,14 +1,9 @@
-# NyayaSetu AI - Dependencies
-
-# PDF Processing
-PyPDF2>=3.0.0
-pdfplumber>=0.10.0
-
-# Embeddings Generation
+# Core Dependencies
+numpy>=1.24.0
 sentence-transformers>=2.2.0
 torch>=2.0.0
 
-# AWS Bedrock Integration
+# AWS Bedrock
 boto3>=1.34.0
 botocore>=1.34.0
 
@@ -17,5 +12,6 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 
-# Utilities
-numpy>=1.24.0
+# PDF Processing (Knowledge Base Setup)
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0

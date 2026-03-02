@@ -20,6 +20,7 @@ from sentence_transformers import SentenceTransformer
 import sys
 sys.path.append(str(Path(__file__).parent.parent / "rag"))
 from bedrock_generator import BedrockAnswerGenerator
+from retrieval_engine import LegalRetrievalEngine
 
 
 # Global state (loaded once at startup)
@@ -27,6 +28,7 @@ class AppState:
     embedding_model: Optional[SentenceTransformer] = None
     knowledge_base: Optional[List[Dict]] = None
     bedrock_generator: Optional[BedrockAnswerGenerator] = None
+    retrieval_engine: Optional[LegalRetrievalEngine] = None
     bedrock_available: bool = False
 
 
@@ -76,6 +78,13 @@ async def lifespan(app: FastAPI):
         with open(kb_path, 'r', encoding='utf-8') as f:
             app_state.knowledge_base = json.load(f)
         print(f"✓ Knowledge base loaded ({len(app_state.knowledge_base)} chunks)")
+        
+        # Initialize enhanced retrieval engine
+        app_state.retrieval_engine = LegalRetrievalEngine(
+            app_state.embedding_model,
+            app_state.knowledge_base
+        )
+        print("✓ Enhanced retrieval engine initialized")
     except Exception as e:
         print(f"✗ Failed to load knowledge base: {e}")
         raise
@@ -126,43 +135,40 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
 
-def search_knowledge_base(query: str, top_k: int = 3) -> List[Dict]:
-    """Search knowledge base using semantic similarity"""
-    if not app_state.embedding_model or not app_state.knowledge_base:
-        raise HTTPException(status_code=500, detail="System not initialized")
+def search_knowledge_base(query: str, top_k: int = None) -> List[Dict]:
+    """Search knowledge base using enhanced hybrid retrieval with dynamic top_k"""
+    if not app_state.retrieval_engine:
+        raise HTTPException(status_code=500, detail="Retrieval engine not initialized")
     
-    # Generate query embedding
-    query_embedding = app_state.embedding_model.encode([query])[0]
-    
-    # Calculate similarities
-    results = []
-    for chunk in app_state.knowledge_base:
-        if 'embedding' in chunk:
-            similarity = cosine_similarity(query_embedding, np.array(chunk['embedding']))
-            results.append({
-                'similarity': float(similarity),
-                'text': chunk['text'],
-                'metadata': chunk['metadata']
-            })
-    
-    # Sort by similarity and return top-k
-    results.sort(key=lambda x: x['similarity'], reverse=True)
-    return results[:top_k]
+    return app_state.retrieval_engine.search(query, top_k=top_k)
 
 
-def calculate_confidence(similarities: List[float]) -> str:
-    """Calculate confidence level based on similarity scores"""
-    if not similarities:
+def calculate_confidence(similarities: List[float], query_type: Dict = None) -> str:
+    """Calculate confidence level with scenario-specific calibration"""
+    if not app_state.retrieval_engine:
         return "Low"
     
-    avg_similarity = sum(similarities) / len(similarities)
+    # Check if this is a scenario query
+    is_scenario = query_type and query_type.get('is_scenario', False) if query_type else False
     
-    if avg_similarity >= 0.75:
-        return "High"
-    elif avg_similarity >= 0.60:
-        return "Medium"
+    if is_scenario:
+        # Scenario-specific confidence calibration
+        if not similarities:
+            return "Low"
+        
+        top_score = similarities[0]
+        supporting_scores = [s for s in similarities[1:3] if s >= 0.75] if len(similarities) > 1 else []
+        
+        # More lenient thresholds for scenarios (complex multi-section queries)
+        if top_score >= 0.80 and len(supporting_scores) >= 2:
+            return "High"
+        elif top_score >= 0.72:
+            return "Medium"
+        else:
+            return "Low"
     else:
-        return "Low"
+        # Standard confidence calculation for definitions and procedural queries
+        return app_state.retrieval_engine.calculate_confidence(similarities)
 
 
 # API Endpoints
@@ -189,22 +195,28 @@ async def ask_question(request: QuestionRequest):
     start_time = time.time()
     
     try:
-        # Step 1: Retrieve relevant context
-        retrieved_chunks = search_knowledge_base(request.question, top_k=3)
+        # Step 1: Retrieve relevant context (dynamic top_k based on query type)
+        retrieved_chunks = search_knowledge_base(request.question)
         
         if not retrieved_chunks:
             raise HTTPException(status_code=404, detail="No relevant information found")
         
-        # Calculate confidence
+        # Extract query type from first chunk's score breakdown
+        query_type = None
+        if retrieved_chunks and 'score_breakdown' in retrieved_chunks[0]:
+            query_type = retrieved_chunks[0]['score_breakdown'].get('query_type')
+        
+        # Calculate confidence with improved calibration for scenarios
         similarities = [chunk['similarity'] for chunk in retrieved_chunks]
-        confidence = calculate_confidence(similarities)
+        confidence = calculate_confidence(similarities, query_type)
         
         # Step 2: Generate answer using Bedrock (if available)
         if app_state.bedrock_available and app_state.bedrock_generator:
             try:
                 response = app_state.bedrock_generator.generate_answer(
                     user_query=request.question,
-                    retrieved_chunks=retrieved_chunks
+                    retrieved_chunks=retrieved_chunks,
+                    query_type=query_type
                     # Uses defaults: max_tokens=600, temperature=0.1
                 )
                 

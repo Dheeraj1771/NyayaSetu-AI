@@ -136,18 +136,89 @@ Content:
         
         return "\n---\n".join(context_parts)
     
-    def build_prompt(self, user_query: str, context: str) -> tuple:
+    def build_prompt(self, user_query: str, context: str, query_type: Dict = None) -> tuple:
         """
-        Build system and user prompts for Claude
+        Build system and user prompts for Claude with query-type awareness
         
         Args:
             user_query: User's question
             context: Assembled context from retrieved chunks
+            query_type: Dictionary with query type flags (optional)
             
         Returns:
             Tuple of (system_prompt, user_prompt)
         """
-        system_prompt = """You are NyayaSetu AI, a legal assistant specializing in Indian consumer protection law.
+        # Detect if this is a scenario query
+        is_scenario = query_type and query_type.get('is_scenario', False) if query_type else False
+        
+        if is_scenario:
+            # Structured scenario reasoning prompt
+            system_prompt = """You are NyayaSetu AI, a legal assistant specializing in Indian consumer protection law.
+
+CRITICAL RULES:
+1. Use ONLY the provided context to answer questions
+2. Do NOT generate information beyond the provided context
+3. Always cite specific Act, Chapter, and Section from context
+4. Provide clear, structured legal analysis
+
+MANDATORY RESPONSE STRUCTURE FOR SCENARIO QUERIES:
+
+Answer:
+
+1. **Legal Status:**
+   - Determine if the person qualifies as a "Consumer" under Section 2(7)
+   - State clearly: "Yes, qualifies as consumer" or provide reasoning
+
+2. **Nature of Violation:**
+   - Classify the issue as one of:
+     * Defect in goods (if product is faulty/not as described)
+     * Deficiency in service (if service quality is inadequate)
+     * Unfair trade practice (if deceptive/misleading conduct)
+     * Product liability (ONLY if physical harm caused by defective product)
+
+3. **Applicable Provisions:**
+   - List relevant chapters and sections from the context
+   - Chapter I: Definitions (if needed for classification)
+   - Chapter IV: Consumer Disputes Redressal (for complaints and remedies)
+   - Chapter VI: Product Liability (ONLY if harm/injury involved)
+
+4. **Remedies Available:**
+   Based on the context, explicitly mention available remedies:
+   - Replacement of goods
+   - Refund of amount paid
+   - Compensation for loss/injury
+   - Removal of defects
+   - Discontinuation of unfair practice
+   - Product liability action (if applicable)
+
+5. **Appropriate Forum:**
+   - District Commission (for claims within pecuniary jurisdiction)
+   - State Commission (for higher value claims or appeals)
+   - National Commission (for highest value claims or appeals)
+   Note: Specify forum based on context; if jurisdiction amount not determinable, mention general guidance
+
+6. **Conclusion:**
+   - Summarize the legal position in 2-3 sentences
+   - Mention limitation period if context provides this information
+
+Sources:
+[List all relevant sections cited]
+
+IMPORTANT: Follow this structure exactly. Do not skip sections. If information is not in context, state "Context does not specify" for that section."""
+
+            user_prompt = f"""Based on the following legal context from the Consumer Protection Act, 2019, please analyze this consumer scenario.
+
+CONTEXT:
+{context}
+
+USER SCENARIO:
+{user_query}
+
+Please provide a structured legal analysis following the mandatory 6-step format specified in your instructions."""
+
+        else:
+            # Standard prompt for definitions and procedural queries
+            system_prompt = """You are NyayaSetu AI, a legal assistant specializing in Indian consumer protection law.
 
 CRITICAL RULES:
 1. Use ONLY the provided context to answer questions
@@ -155,7 +226,8 @@ CRITICAL RULES:
 3. If the context doesn't contain the answer, say "I don't have enough information in the provided context to answer this question."
 4. Always cite the specific Act, Chapter, and Section from the context
 5. Provide clear, concise explanations in simple language
-6. Structure your response in the required format
+6. For definitions: explain the term clearly with relevant provisions
+7. For procedural questions: provide step-by-step guidance based on context
 
 RESPONSE FORMAT:
 Answer:
@@ -166,7 +238,7 @@ Act: <Act name from context>
 Chapter: <Chapter name from context>
 Section: <Section number from context>"""
 
-        user_prompt = f"""Based on the following legal context from the Consumer Protection Act, 2019, please answer the user's question.
+            user_prompt = f"""Based on the following legal context from the Consumer Protection Act, 2019, please answer the user's question.
 
 CONTEXT:
 {context}
@@ -183,7 +255,8 @@ Please provide your answer in the specified format."""
         user_query: str,
         retrieved_chunks: List[Dict[str, Any]],
         max_tokens: int = None,
-        temperature: float = None
+        temperature: float = None,
+        query_type: Dict = None
     ) -> Dict[str, Any]:
         """
         Generate answer using Bedrock Claude 3 Haiku
@@ -193,6 +266,7 @@ Please provide your answer in the specified format."""
             retrieved_chunks: Top-k retrieved chunks from knowledge base
             max_tokens: Maximum tokens for response (default: 600)
             temperature: Sampling temperature (default: 0.1 for deterministic responses)
+            query_type: Dictionary with query type flags (for structured reasoning)
             
         Returns:
             Dictionary containing:
@@ -212,8 +286,8 @@ Please provide your answer in the specified format."""
         # Assemble context from truncated chunks
         context = self.assemble_context(truncated_chunks)
         
-        # Build prompts
-        system_prompt, user_prompt = self.build_prompt(user_query, context)
+        # Build prompts with query type awareness
+        system_prompt, user_prompt = self.build_prompt(user_query, context, query_type)
         
         # Prepare Converse API request
         messages = [
