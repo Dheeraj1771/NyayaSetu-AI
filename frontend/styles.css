@@ -1,5 +1,8 @@
 /* NyayaSetu AI - Premium UI Styles */
 
+/* Google Fonts - Indic Script Support */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;500;600;700;800&display=swap');
+
 /* CSS Variables */
 :root {
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -30,7 +33,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     background: var(--bg-secondary);
@@ -48,10 +51,10 @@ body {
 .hero {
     background: var(--primary-gradient);
     color: white;
-    padding: 4rem 0 3rem;
+    padding: 4.5rem 0 3.5rem;
     text-align: center;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .hero::before {
@@ -63,18 +66,65 @@ body {
     bottom: 0;
     background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
     opacity: 0.3;
+    overflow: hidden;
 }
 
 .hero-content {
     position: relative;
     z-index: 1;
+    padding: 0.5rem 0;
+}
+
+/* Language Selector */
+.language-selector {
+    position: absolute;
+    top: -2rem;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.language-selector label {
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.language-dropdown {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.language-dropdown:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.language-dropdown:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.language-dropdown option {
+    background: var(--text-primary);
+    color: white;
 }
 
 .hero-title {
     font-size: 3rem;
     font-weight: 800;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     letter-spacing: -0.02em;
+    line-height: 1.4;
+    padding: 0.25rem 0;
 }
 
 .gradient-text {
@@ -82,19 +132,25 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    display: inline-block;
+    padding: 0.1rem 0;
 }
 
 .hero-subtitle {
     font-size: 1.5rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     opacity: 0.95;
+    line-height: 1.5;
+    padding: 0.25rem 0;
 }
 
 .hero-description {
     font-size: 1rem;
     opacity: 0.85;
     margin-bottom: 1.5rem;
+    line-height: 1.6;
+    padding: 0.25rem 0;
 }
 
 .hero-badge {
@@ -103,10 +159,11 @@ body {
     gap: 0.5rem;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
-    padding: 0.5rem 1.25rem;
+    padding: 0.75rem 1.25rem;
     border-radius: var(--radius-lg);
     font-size: 0.875rem;
     font-weight: 500;
+    line-height: 1.5;
 }
 
 .badge-icon {
@@ -139,6 +196,8 @@ body {
     font-weight: 700;
     margin-bottom: 1.5rem;
     color: var(--text-primary);
+    line-height: 1.4;
+    padding: 0.25rem 0;
 }
 
 /* Query Form */
@@ -325,6 +384,8 @@ body {
     font-weight: 700;
     margin-bottom: 1rem;
     color: var(--text-primary);
+    line-height: 1.5;
+    padding: 0.25rem 0;
 }
 
 .answer-content {
@@ -451,10 +512,14 @@ body {
 @media (max-width: 768px) {
     .hero-title {
         font-size: 2rem;
+        line-height: 1.4;
+        padding: 0.25rem 0;
     }
 
     .hero-subtitle {
         font-size: 1.25rem;
+        line-height: 1.5;
+        padding: 0.25rem 0;
     }
 
     .card {
@@ -468,11 +533,19 @@ body {
 
 @media (max-width: 480px) {
     .hero {
-        padding: 3rem 0 2rem;
+        padding: 3.5rem 0 2.5rem;
     }
 
     .hero-title {
         font-size: 1.75rem;
+        line-height: 1.4;
+        padding: 0.25rem 0;
+    }
+
+    .hero-subtitle {
+        font-size: 1.125rem;
+        line-height: 1.5;
+        padding: 0.25rem 0;
     }
 
     .card {

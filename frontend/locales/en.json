@@ -1,0 +1,46 @@
+{
+    "hero": {
+        "title": "NyayaSetu AI",
+        "subtitle": "Intelligent Consumer Law Assistant",
+        "description": "Powered by Retrieval-Augmented Generation and Amazon Bedrock",
+        "badge": "Consumer Protection Act, 2019"
+    },
+    "query": {
+        "title": "Ask Your Legal Question",
+        "placeholder": "e.g., What are consumer rights under the Act?",
+        "submitButton": "Get Answer",
+        "newQuestionButton": "Ask Another Question"
+    },
+    "loading": {
+        "text": "Analyzing legal context..."
+    },
+    "error": {
+        "title": "Unable to Process Request",
+        "tryAgainButton": "Try Again"
+    },
+    "answer": {
+        "title": "Answer",
+        "confidenceLabel": "Confidence:",
+        "processingTimeLabel": "Processing Time:",
+        "viewSources": "View Sources",
+        "hideSources": "Hide Sources"
+    },
+    "sources": {
+        "actLabel": "Act:",
+        "chapterLabel": "Chapter:",
+        "sectionLabel": "Section:",
+        "relevanceLabel": "Relevance:"
+    },
+    "footer": {
+        "disclaimer": "NyayaSetu AI provides informational guidance based on the Consumer Protection Act, 2019. It does not provide legal advice. Consult qualified legal professionals for complex cases.",
+        "credit": "Built for AI For Bharat Hackathon 2026"
+    },
+    "language": {
+        "selector": "Language",
+        "en": "English",
+        "hi": "हिंदी",
+        "ta": "தமிழ்",
+        "te": "తెలుగు",
+        "mr": "मराठी"
+    }
+}

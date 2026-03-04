@@ -21,6 +21,7 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent / "rag"))
 from bedrock_generator import BedrockAnswerGenerator
 from retrieval_engine import LegalRetrievalEngine
+from translation_service import TranslationService
 
 
 # Global state (loaded once at startup)
@@ -29,6 +30,7 @@ class AppState:
     knowledge_base: Optional[List[Dict]] = None
     bedrock_generator: Optional[BedrockAnswerGenerator] = None
     retrieval_engine: Optional[LegalRetrievalEngine] = None
+    translation_service: Optional[TranslationService] = None
     bedrock_available: bool = False
 
 
@@ -38,6 +40,7 @@ app_state = AppState()
 # Pydantic Models
 class QuestionRequest(BaseModel):
     question: str = Field(..., min_length=3, max_length=500, description="User's legal question")
+    language: str = Field(default="en", description="Language code: en, hi, ta, te, mr")
 
 
 class Source(BaseModel):
@@ -99,6 +102,16 @@ async def lifespan(app: FastAPI):
         print(f"⚠ Bedrock initialization failed: {e}")
         print("⚠ API will run in retrieval-only mode")
         app_state.bedrock_available = False
+    
+    # Initialize Translation Service
+    print("\n[4/4] Initializing Translation Service...")
+    try:
+        app_state.translation_service = TranslationService(region_name="ap-south-1")
+        print("✓ Translation service initialized")
+    except Exception as e:
+        print(f"⚠ Translation service initialization failed: {e}")
+        print("⚠ API will run in English-only mode")
+        app_state.translation_service = None
     
     print("\n" + "=" * 70)
     print("✓ API Server Ready")
@@ -186,17 +199,39 @@ async def root():
 @app.post("/ask", response_model=AnswerResponse)
 async def ask_question(request: QuestionRequest):
     """
-    Process legal question and return RAG-generated answer
+    Process legal question and return RAG-generated answer with multilingual support
     
-    - Retrieves top-3 relevant chunks from knowledge base
+    - Translates non-English queries to English
+    - Retrieves top-k relevant chunks from knowledge base
     - Generates answer using Bedrock Claude 3 Haiku
+    - Translates response back to original language
     - Returns structured response with sources and confidence
     """
     start_time = time.time()
     
     try:
-        # Step 1: Retrieve relevant context (dynamic top_k based on query type)
-        retrieved_chunks = search_knowledge_base(request.question)
+        # Get original query and language
+        original_query = request.question
+        language = request.language.lower()
+        
+        # Validate language
+        if language not in ['en', 'hi', 'ta', 'te', 'mr']:
+            language = 'en'  # Fallback to English
+        
+        # Step 1: Translate query to English if needed
+        english_query = original_query
+        if language != 'en' and app_state.translation_service:
+            try:
+                english_query = app_state.translation_service.translate_to_english(
+                    original_query, language
+                )
+                print(f"Translated query ({language} → en): {english_query}")
+            except Exception as e:
+                print(f"Translation to English failed: {e}, using original query")
+                english_query = original_query
+        
+        # Step 2: Retrieve relevant context (UNCHANGED - core RAG logic)
+        retrieved_chunks = search_knowledge_base(english_query)
         
         if not retrieved_chunks:
             raise HTTPException(status_code=404, detail="No relevant information found")
@@ -206,18 +241,17 @@ async def ask_question(request: QuestionRequest):
         if retrieved_chunks and 'score_breakdown' in retrieved_chunks[0]:
             query_type = retrieved_chunks[0]['score_breakdown'].get('query_type')
         
-        # Calculate confidence with improved calibration for scenarios
+        # Calculate confidence with improved calibration for scenarios (UNCHANGED)
         similarities = [chunk['similarity'] for chunk in retrieved_chunks]
         confidence = calculate_confidence(similarities, query_type)
         
-        # Step 2: Generate answer using Bedrock (if available)
+        # Step 3: Generate answer using Bedrock (UNCHANGED - core RAG logic)
         if app_state.bedrock_available and app_state.bedrock_generator:
             try:
                 response = app_state.bedrock_generator.generate_answer(
-                    user_query=request.question,
+                    user_query=english_query,
                     retrieved_chunks=retrieved_chunks,
                     query_type=query_type
-                    # Uses defaults: max_tokens=600, temperature=0.1
                 )
                 
                 answer_text = response['answer']
@@ -230,7 +264,19 @@ async def ask_question(request: QuestionRequest):
             # Retrieval-only mode
             answer_text = _format_retrieval_fallback(retrieved_chunks)
         
-        # Step 3: Format sources
+        # Step 4: Translate response back to original language if needed
+        final_answer = answer_text
+        if language != 'en' and app_state.translation_service:
+            try:
+                final_answer = app_state.translation_service.translate_from_english(
+                    answer_text, language
+                )
+                print(f"Translated response (en → {language})")
+            except Exception as e:
+                print(f"Translation from English failed: {e}, returning English response")
+                final_answer = answer_text
+        
+        # Step 5: Format sources (UNCHANGED)
         sources = [
             Source(
                 act=chunk['metadata'].get('act', 'N/A'),
@@ -245,7 +291,7 @@ async def ask_question(request: QuestionRequest):
         processing_time = int((time.time() - start_time) * 1000)
         
         return AnswerResponse(
-            answer=answer_text,
+            answer=final_answer,
             sources=sources,
             confidence=confidence,
             processing_time_ms=processing_time
