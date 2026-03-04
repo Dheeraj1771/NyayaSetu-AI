@@ -6,6 +6,15 @@ const API_BASE_URL = 'http://localhost:8000';
 let currentLanguage = 'en';
 let translations = {};
 
+// Voice Recognition
+let recognition = null;
+let isListening = false;
+
+// Voice Synthesis
+let synthesis = window.speechSynthesis;
+let isSpeaking = false;
+let currentUtterance = null;
+
 // DOM Elements
 const queryForm = document.getElementById('queryForm');
 const questionInput = document.getElementById('questionInput');
@@ -22,6 +31,8 @@ const sourcesContent = document.getElementById('sourcesContent');
 const sourcesList = document.getElementById('sourcesList');
 const processingTime = document.getElementById('processingTime');
 const languageSelect = document.getElementById('languageSelect');
+const voiceInputBtn = document.getElementById('voiceInputBtn');
+const voiceOutputBtn = document.getElementById('voiceOutputBtn');
 
 // Initialize i18n
 async function initI18n() {
@@ -89,11 +100,210 @@ languageSelect.addEventListener('change', async (e) => {
     // Load and apply new translations
     await loadTranslations(newLanguage);
     applyTranslations();
+
+    // Update voice recognition language if initialized
+    if (recognition) {
+        const languageMap = {
+            'en': 'en-IN',
+            'hi': 'hi-IN',
+            'ta': 'ta-IN',
+            'te': 'te-IN',
+            'mr': 'mr-IN'
+        };
+        recognition.lang = languageMap[newLanguage] || 'en-IN';
+    }
+
+    // Stop any ongoing speech
+    if (isSpeaking) {
+        stopSpeaking();
+    }
 });
 
 // Event Listeners
 queryForm.addEventListener('submit', handleSubmit);
 sourcesToggle.addEventListener('click', toggleSources);
+voiceInputBtn.addEventListener('click', toggleVoiceInput);
+voiceOutputBtn.addEventListener('click', toggleVoiceOutput);
+
+// Voice Input: Initialize Speech Recognition
+function initVoiceInput() {
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        console.warn('Speech Recognition not supported in this browser');
+        voiceInputBtn.style.display = 'none';
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    // Language mapping for Indian languages
+    const languageMap = {
+        'en': 'en-IN',
+        'hi': 'hi-IN',
+        'ta': 'ta-IN',
+        'te': 'te-IN',
+        'mr': 'mr-IN'
+    };
+
+    recognition.lang = languageMap[currentLanguage] || 'en-IN';
+
+    recognition.onstart = () => {
+        isListening = true;
+        voiceInputBtn.classList.add('listening');
+        voiceInputBtn.title = 'Listening...';
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        questionInput.value = transcript;
+        questionInput.focus();
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        isListening = false;
+        voiceInputBtn.classList.remove('listening');
+        voiceInputBtn.title = 'Voice Input';
+
+        if (event.error === 'not-allowed') {
+            alert('Microphone access denied. Please allow microphone access in your browser settings.');
+        } else if (event.error === 'no-speech') {
+            alert('No speech detected. Please try again.');
+        }
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        voiceInputBtn.classList.remove('listening');
+        voiceInputBtn.title = 'Voice Input';
+    };
+}
+
+// Toggle Voice Input
+function toggleVoiceInput() {
+    if (!recognition) {
+        alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+        return;
+    }
+
+    if (isListening) {
+        recognition.stop();
+    } else {
+        // Update language before starting
+        const languageMap = {
+            'en': 'en-IN',
+            'hi': 'hi-IN',
+            'ta': 'ta-IN',
+            'te': 'te-IN',
+            'mr': 'mr-IN'
+        };
+        recognition.lang = languageMap[currentLanguage] || 'en-IN';
+        recognition.start();
+    }
+}
+
+// Voice Output: Initialize Speech Synthesis
+function initVoiceOutput() {
+    if (!synthesis) {
+        console.warn('Speech Synthesis not supported in this browser');
+        return;
+    }
+
+    // Check if voices are loaded
+    if (synthesis.getVoices().length === 0) {
+        synthesis.addEventListener('voiceschanged', () => {
+            console.log('Voices loaded:', synthesis.getVoices().length);
+        });
+    }
+}
+
+// Toggle Voice Output
+function toggleVoiceOutput() {
+    if (!synthesis) {
+        alert('Text-to-speech is not supported in your browser.');
+        return;
+    }
+
+    if (isSpeaking) {
+        stopSpeaking();
+    } else {
+        speakAnswer();
+    }
+}
+
+// Speak Answer
+function speakAnswer() {
+    const text = answerContent.textContent;
+
+    if (!text) {
+        return;
+    }
+
+    // Stop any ongoing speech
+    synthesis.cancel();
+
+    // Create utterance
+    currentUtterance = new SpeechSynthesisUtterance(text);
+
+    // Language mapping for speech synthesis
+    const languageMap = {
+        'en': 'en-IN',
+        'hi': 'hi-IN',
+        'ta': 'ta-IN',
+        'te': 'te-IN',
+        'mr': 'mr-IN'
+    };
+
+    currentUtterance.lang = languageMap[currentLanguage] || 'en-IN';
+    currentUtterance.rate = 0.9;
+    currentUtterance.pitch = 1.0;
+
+    // Try to find appropriate voice
+    const voices = synthesis.getVoices();
+    const preferredVoice = voices.find(voice =>
+        voice.lang.startsWith(currentLanguage) ||
+        voice.lang.startsWith(languageMap[currentLanguage])
+    );
+
+    if (preferredVoice) {
+        currentUtterance.voice = preferredVoice;
+    }
+
+    currentUtterance.onstart = () => {
+        isSpeaking = true;
+        voiceOutputBtn.classList.add('speaking');
+        voiceOutputBtn.title = 'Stop Speaking';
+    };
+
+    currentUtterance.onend = () => {
+        isSpeaking = false;
+        voiceOutputBtn.classList.remove('speaking');
+        voiceOutputBtn.title = 'Listen to Answer';
+    };
+
+    currentUtterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event.error);
+        isSpeaking = false;
+        voiceOutputBtn.classList.remove('speaking');
+        voiceOutputBtn.title = 'Listen to Answer';
+    };
+
+    synthesis.speak(currentUtterance);
+}
+
+// Stop Speaking
+function stopSpeaking() {
+    if (synthesis && isSpeaking) {
+        synthesis.cancel();
+        isSpeaking = false;
+        voiceOutputBtn.classList.remove('speaking');
+        voiceOutputBtn.title = 'Listen to Answer';
+    }
+}
 
 // Handle form submission
 async function handleSubmit(e) {
@@ -249,6 +459,11 @@ function resetForm() {
     questionInput.value = '';
     questionInput.focus();
 
+    // Stop any ongoing speech
+    if (isSpeaking) {
+        stopSpeaking();
+    }
+
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -279,6 +494,8 @@ async function checkApiHealth() {
 // Initialize
 (async function () {
     await initI18n();
+    initVoiceInput();
+    initVoiceOutput();
     checkApiHealth();
     questionInput.focus();
 })();

@@ -24,6 +24,10 @@ NyayaSetu AI is a legal AI engine that provides accurate, source-grounded answer
 - 🇮🇳 Telugu - తెలుగు (te)
 - 🇮🇳 Marathi - मराठी (mr)
 
+## Voice Support
+
+Voice input (Speech-to-Text) and voice output (Text-to-Speech) using Web Speech API. Microphone button for voice queries, speaker button to listen to answers. Supports all 5 languages with Indian locale variants (en-IN, hi-IN, ta-IN, te-IN, mr-IN). Frontend-only implementation, no external APIs required.
+
 ## Architecture Overview
 
 High-level pipeline showing multilingual wrapper around core RAG:

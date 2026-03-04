@@ -54,6 +54,9 @@
                             rows="3"
                             required
                         ></textarea>
+                        <button type="button" class="voice-btn" id="voiceInputBtn" title="Voice Input">
+                            <span class="voice-icon">🎤</span>
+                        </button>
                     </div>
                     <button type="submit" class="btn-primary" id="submitBtn">
                         <span class="btn-text" data-i18n="query.submitButton">Get Answer</span>
@@ -86,7 +89,12 @@
 
                 <!-- Answer Content -->
                 <div class="answer-section">
-                    <h3 class="section-title" data-i18n="answer.title">Answer</h3>
+                    <div class="section-header">
+                        <h3 class="section-title" data-i18n="answer.title">Answer</h3>
+                        <button type="button" class="voice-btn voice-output-btn" id="voiceOutputBtn" title="Listen to Answer">
+                            <span class="voice-icon">🔊</span>
+                        </button>
+                    </div>
                     <div class="answer-content" id="answerContent"></div>
                 </div>
 
